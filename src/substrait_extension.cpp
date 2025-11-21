@@ -18,6 +18,7 @@
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/main/config.hpp"
 #include "duckdb/main/connection.hpp"
+#include "duckdb/main/settings.hpp"
 #endif
 
 namespace duckdb {
@@ -57,8 +58,9 @@ struct ToSubstraitFunctionData : public TableFunctionData {
 		disabled_optimizers.insert(OptimizerType::COMPRESSED_MATERIALIZATION);
 		disabled_optimizers.insert(OptimizerType::MATERIALIZED_CTE);
 		// If error(varchar) gets implemented in substrait this can be removed
-		context.config.scalar_subquery_error_on_multiple_rows = false;
-		DBConfig::GetConfig(context).options.disabled_optimizers = disabled_optimizers;
+		auto &config = DBConfig::GetConfig(context);
+		config.SetOptionByName(ScalarSubqueryErrorOnMultipleRowsSetting::Name, Value::BOOLEAN(false));
+		config.options.disabled_optimizers = disabled_optimizers;
 	}
 
 	unique_ptr<LogicalOperator> ExtractPlan(ClientContext &context) {
@@ -373,7 +375,7 @@ void InitializeFromSubstraitJSON(const Connection &con) {
 	catalog.CreateTableFunction(*con.context, from_sub_info_json);
 }
 
-void SubstraitExtension::Load(DuckDB &db) {
+static void LoadInternal(DatabaseInstance &db) {
 	Connection con(db);
 	con.BeginTransaction();
 
@@ -386,6 +388,10 @@ void SubstraitExtension::Load(DuckDB &db) {
 	con.Commit();
 }
 
+void SubstraitExtension::Load(ExtensionLoader &loader) {
+	LoadInternal(loader.GetDatabaseInstance());
+}
+
 std::string SubstraitExtension::Name() {
 	return "substrait";
 }
@@ -394,12 +400,8 @@ std::string SubstraitExtension::Name() {
 
 extern "C" {
 
-DUCKDB_EXTENSION_API void substrait_init(duckdb::DatabaseInstance &db) {
-	duckdb::DuckDB db_wrapper(db);
-	db_wrapper.LoadExtension<duckdb::SubstraitExtension>();
+DUCKDB_CPP_EXTENSION_ENTRY(substrait, loader) {
+	duckdb::LoadInternal(loader.GetDatabaseInstance());
 }
 
-DUCKDB_EXTENSION_API const char *substrait_version() {
-	return duckdb::DuckDB::LibraryVersion();
-}
 }
