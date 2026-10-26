@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.5...3.29)
 set(TARGET_NAME substrait_c_test)
 project(${TARGET_NAME})
 
-set (CMAKE_CXX_STANDARD 11)
-
 include_directories(include)
 include_directories(../../duckdb/src/include)
 include_directories(../../duckdb/test/include)

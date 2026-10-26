@@ -21,7 +21,7 @@ set(EXTENSION_SOURCES
     src/custom_extensions.cpp
     src/custom_extensions_generated.cpp)
 
-add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
+build_static_extension(${TARGET_NAME} ${EXTENSION_SOURCES})
 target_link_libraries(${EXTENSION_NAME} substrait::proto)
 
 set(PARAMETERS "-warnings")

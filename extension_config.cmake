@@ -6,3 +6,6 @@ duckdb_extension_load(substrait
     INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/src/include
     LOAD_TESTS
 )
+
+# Keep the bundled shell and C++ test host loading Substrait on startup.
+duckdb_extension_statically_link(substrait)

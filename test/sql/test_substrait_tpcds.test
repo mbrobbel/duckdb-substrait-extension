@@ -7,7 +7,11 @@ require substrait
 require tpcds
 
 statement ok
-PRAGMA enable_verification
+SET debug_verify_statement='copy_statement'
+
+# Small scale factors can leave ratio denominators empty. Verify NULL results in that case.
+statement ok
+SET GLOBAL error_on_division_by_zero=false
 
 statement ok
 CALL dsdgen(sf=0.1)

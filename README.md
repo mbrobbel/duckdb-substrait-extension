@@ -6,6 +6,8 @@ The most commonly used logical relations and functions are supported: Substrait 
 
 ## Building
 
+This branch targets DuckDB v2.0.0. Use the pinned DuckDB submodule for both the extension and its test host.
+
 ### Prerequisites
 
 The extension consumes protobuf and the Substrait protobuf bindings from [vcpkg](https://vcpkg.io) (see [Updating the Substrait Version](#updating-the-substrait-version)), so the build needs a bootstrapped vcpkg checkout:

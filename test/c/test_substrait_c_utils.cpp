@@ -1,3 +1,4 @@
+#include "catch.hpp"
 #include "test_helpers.hpp"
 #include "test_substrait_c_utils.hpp"
 

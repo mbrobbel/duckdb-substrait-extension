@@ -113,42 +113,23 @@ private:
 	static void TransformEnum(const Value &dval, substrait::Expression &sexpr);
 
 	//! Methods to transform a DuckDB Expression to a Substrait Expression
-	void TransformExpr(Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset = 0);
-	static void TransformBoundRefExpression(Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
-	void TransformCastExpression(Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
-	void TransformFunctionExpression(Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
-	static void TransformConstantExpression(Expression &dexpr, substrait::Expression &sexpr);
-	void TransformComparisonExpression(Expression &dexpr, substrait::Expression &sexpr);
-	void TransformBetweenExpression(Expression &dexpr, substrait::Expression &sexpr);
-	void TransformConjunctionExpression(Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
-	void TransformNotNullExpression(Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
-	void TransformIsNullExpression(Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
-	void TransformNotExpression(Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
-	void TransformCoalesceExpression(Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
-	void TransformCaseExpression(Expression &dexpr, substrait::Expression &sexpr);
-	void TransformInExpression(Expression &dexpr, substrait::Expression &sexpr);
+	void TransformExpr(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset = 0);
+	static void TransformBoundRefExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	void TransformCastExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	void TransformFunctionExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	static void TransformConstantExpression(const Expression &dexpr, substrait::Expression &sexpr);
+	void TransformComparisonExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	void TransformBetweenExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	void TransformConjunctionExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	void TransformNotNullExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	void TransformIsNullExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	void TransformNotExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	void TransformCoalesceExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	void TransformCaseExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
+	void TransformInExpression(const Expression &dexpr, substrait::Expression &sexpr, uint64_t col_offset);
 	//! Transforms a DuckDB Logical Type into a Substrait Type
 	static substrait::Type DuckToSubstraitType(const LogicalType &type, BaseStatistics *column_statistics = nullptr,
 	                                           bool not_null = false);
-
-	//! Methods to transform DuckDB Filters to Substrait Expression
-	substrait::Expression *TransformFilter(uint64_t col_idx, const LogicalType &column_type, const TableFilter &dfilter,
-	                                       const LogicalType &return_type);
-	substrait::Expression *TransformIsNotNullFilter(uint64_t col_idx, const LogicalType &column_type,
-	                                                const TableFilter &dfilter, const LogicalType &return_type);
-	substrait::Expression *TransformIsNullFilter(uint64_t col_idx, const LogicalType &column_type,
-	                                             const TableFilter &dfilter, const LogicalType &return_type);
-	substrait::Expression *TransformConjunctionAndFilter(uint64_t col_idx, const LogicalType &column_type,
-	                                                     const TableFilter &dfilter, const LogicalType &return_type);
-	substrait::Expression *TransformConjunctionOrFilter(uint64_t col_idx, const LogicalType &column_type,
-	                                                    const TableFilter &dfilter, const LogicalType &return_type);
-		substrait::Expression *TransformConstantComparisonFilter(uint64_t col_idx, const LogicalType &column_type,
-	                                                         const TableFilter &dfilter, const LogicalType &return_type);
-		substrait::Expression *TransformStructExtractFilter(uint64_t col_idx, const LogicalType &column_type, const TableFilter &dfilter, const LogicalType &return_type);
-		substrait::Expression *TransformExpressionFilter(uint64_t col_idx, const LogicalType &column_type, const TableFilter &dfilter, const LogicalType &return_type);
-		substrait::Expression *TransformInFilter(uint64_t col_idx, const LogicalType &column_type, const TableFilter &dfilter, const LogicalType &return_type);
-	substrait::Expression *TransformDynamicFilter(uint64_t col_idx, const LogicalType &column_type, const TableFilter &dfilter, const LogicalType &return_type);
-
 
 	//! Transforms DuckDB Join Conditions to Substrait Expression
 	substrait::Expression *TransformJoinCond(const JoinCondition &dcond, uint64_t left_ncol);
@@ -157,7 +138,7 @@ private:
 
 	static void AllocateFunctionArgument(substrait::Expression_ScalarFunction *scalar_fun,
 	                                     substrait::Expression *value);
-	static std::string &RemapFunctionName(std::string &function_name);
+	static std::string RemapFunctionName(std::string function_name);
 	static bool IsExtractFunction(const string &function_name);
 
 	//! Creates a Conjunction
@@ -223,7 +204,7 @@ private:
 	substrait::Plan plan;
 	ClientContext &context;
 	//! Map the CTE index to the Substrait reference
-	vector<uint32_t> cte_indices;
+	vector<TableIndex> cte_indices;
 	//! If we are generating a query plan on strict mode we will error if
 	//! things don't go perfectly shiny
 	bool strict;

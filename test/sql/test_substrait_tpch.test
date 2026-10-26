@@ -11,7 +11,7 @@ require substrait
 require tpch
 
 statement ok
-PRAGMA enable_verification
+SET debug_verify_statement='copy_statement'
 
 statement ok
 CALL dbgen(sf=0.01)

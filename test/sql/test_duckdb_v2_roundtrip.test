@@ -1,0 +1,149 @@
+# name: test/sql/test_duckdb_v2_roundtrip.test
+# description: DuckDB v2 plan shapes and temporary export settings
+# group: [sql]
+
+require substrait
+
+statement ok
+SET debug_verify_statement='copy_statement';
+
+statement ok
+CREATE TABLE input_data (unused INTEGER, a INTEGER, b INTEGER, text VARCHAR);
+
+statement ok
+INSERT INTO input_data VALUES (90, 1, 10, 'a'), (80, 2, 20, 'bb'), (70, 3, 30, 'ccc');
+
+# Scan filters address the base schema, including reordered and multi-column references.
+statement ok
+SET VARIABLE plan = (SELECT * FROM get_substrait('SELECT b, a FROM input_data WHERE a=1 OR b=30 ORDER BY a'));
+
+query II
+SELECT * FROM from_substrait(getvariable('plan'));
+----
+10	1
+30	3
+
+# Optional IN hints can share a scan filter with a required range predicate.
+statement ok
+SET VARIABLE plan = (SELECT * FROM get_substrait('SELECT a FROM input_data WHERE a IN (1,3) AND a>1'));
+
+query I
+SELECT * FROM from_substrait(getvariable('plan'));
+----
+3
+
+# Scalar and type pushdown must not hide expressions inside the scan.
+statement ok
+SET VARIABLE plan = (SELECT * FROM get_substrait('SELECT length(text), a::BIGINT FROM input_data ORDER BY a'));
+
+query II
+SELECT * FROM from_substrait(getvariable('plan'));
+----
+1	1
+2	2
+3	3
+
+# A residual join condition uses references from both inputs.
+statement ok
+SET VARIABLE plan = (SELECT * FROM get_substrait('SELECT l.a, r.a FROM input_data l JOIN input_data r ON l.a=r.a AND (l.b=10 OR r.b=30) ORDER BY l.a'));
+
+query II
+SELECT * FROM from_substrait(getvariable('plan'));
+----
+1	1
+3	3
+
+# Nested expressions on a join input retain that input's column offset.
+statement ok
+SET VARIABLE plan = (SELECT * FROM get_substrait('SELECT l.a, r.a FROM input_data l JOIN input_data r ON l.a=CASE WHEN r.a IN (2,3) AND r.b BETWEEN 20 AND 30 THEN r.a ELSE -1 END ORDER BY l.a', enable_optimizer=false));
+
+query II
+SELECT * FROM from_substrait(getvariable('plan'));
+----
+2	2
+3	3
+
+statement ok
+SET VARIABLE plan = (SELECT * FROM get_substrait('SELECT a FROM input_data WHERE a>1 ORDER BY a LIMIT 1'));
+
+query I
+SELECT * FROM from_substrait(getvariable('plan'));
+----
+2
+
+# Nested materialized CTEs must precede their consumers in the exported relation list.
+statement ok
+SET VARIABLE plan = (SELECT * FROM get_substrait('WITH outer_cte AS MATERIALIZED (WITH inner_cte AS MATERIALIZED (SELECT a FROM input_data) SELECT a+1 AS a FROM inner_cte) SELECT * FROM outer_cte ORDER BY a'));
+
+query I
+SELECT * FROM from_substrait(getvariable('plan'));
+----
+2
+3
+4
+
+# Window offsets and defaults are arguments in v2.
+statement ok
+SET VARIABLE plan = (SELECT * FROM get_substrait('SELECT lag(a, 2, -1) OVER (ORDER BY a) FROM input_data ORDER BY a'));
+
+query I
+SELECT * FROM from_substrait(getvariable('plan'));
+----
+-1
+-1
+1
+
+statement ok
+SET delim_join_as_cte=true;
+
+statement ok
+SET scalar_subquery_error_on_multiple_rows=true;
+
+statement ok
+CALL get_substrait('SELECT a FROM input_data WHERE EXISTS (SELECT 1 FROM input_data r WHERE r.a=input_data.a)');
+
+query II
+SELECT current_setting('delim_join_as_cte'), current_setting('scalar_subquery_error_on_multiple_rows');
+----
+true	true
+
+statement error
+CALL get_substrait('SELECT * FROM missing_v2_table');
+----
+missing_v2_table
+
+query II
+SELECT current_setting('delim_join_as_cte'), current_setting('scalar_subquery_error_on_multiple_rows');
+----
+true	true
+
+# A scan with no used columns still occupies one position before the right-hand columns.
+statement ok
+CREATE TABLE unused_left (x VARCHAR, y VARCHAR);
+
+statement ok
+INSERT INTO unused_left VALUES ('wrong', 'columns'), ('unused', 'values');
+
+statement ok
+SET VARIABLE plan = (SELECT * FROM get_substrait('SELECT r.b FROM unused_left l, input_data r ORDER BY r.b'));
+
+query I
+SELECT * FROM from_substrait(getvariable('plan'));
+----
+10
+10
+20
+20
+30
+30
+
+# MARK joins emit the left columns and one boolean, not the right input's schema.
+statement ok
+SET VARIABLE plan = (SELECT * FROM get_substrait('SELECT a, a IN (SELECT b/10 FROM input_data WHERE a<3) FROM input_data ORDER BY a', enable_optimizer=false));
+
+query II
+SELECT * FROM from_substrait(getvariable('plan'));
+----
+1	true
+2	true
+3	false

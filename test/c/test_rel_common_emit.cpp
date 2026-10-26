@@ -79,8 +79,8 @@ void CheckEmitColumns(Connection &con, const EmitJSON &rel, const duckdb::vector
 	}
 	auto result = FromSubstraitJSON(con, EmitPlan(rel, names).dump());
 	REQUIRE_NO_FAIL(*result);
-	REQUIRE(result->names == expected_names);
-	REQUIRE(result->types == types);
+	REQUIRE(result->GetNames() == StringsToIdentifiers(expected_names));
+	REQUIRE(result->GetTypes() == types);
 	for (idx_t i = 0; i < columns.size(); i++) {
 		REQUIRE(CHECK_COLUMN(result, i, columns[i]));
 	}
